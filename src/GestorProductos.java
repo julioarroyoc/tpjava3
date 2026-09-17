@@ -34,6 +34,10 @@ public class GestorProductos extends JFrame {
     // Lista desplegable para seleccionar la categoría.
     private JComboBox<String> cmbCategoria;
 
+    // Componentes para los filtros combinados.
+    private JComboBox<String> cmbFiltroCategoria;
+    private JTextField txtPrecioMaximo;
+
 
     // ========================================================
     // COMPONENTES DE LA TABLA
@@ -163,6 +167,58 @@ public class GestorProductos extends JFrame {
         panelFormulario.add(btnAgregar);
         panelFormulario.add(btnLimpiar);
 
+        // ====================================================
+        // PANEL DE FILTROS COMBINADOS
+        // ====================================================
+
+        JPanel panelFiltros =
+        new JPanel(new FlowLayout(FlowLayout.LEFT));
+
+        panelFiltros.setBorder(
+        BorderFactory.createTitledBorder(
+                "Filtros combinados"
+        )
+        );
+
+        // Lista de categorías para el filtro.
+        cmbFiltroCategoria = new JComboBox<>();
+
+        cmbFiltroCategoria.addItem("Todas");
+        cmbFiltroCategoria.addItem("Almacén");
+        cmbFiltroCategoria.addItem("Bebidas");
+        cmbFiltroCategoria.addItem("Limpieza");
+        cmbFiltroCategoria.addItem("Verduleria");
+        cmbFiltroCategoria.addItem("Otros");
+
+        // Campo para escribir el precio máximo.
+        txtPrecioMaximo = new JTextField(8);
+
+        // Botones de los filtros.
+        JButton btnFiltrar =
+        new JButton("Aplicar filtros");
+
+        JButton btnMostrarTodos =
+        new JButton("Mostrar todos");
+
+        // Agregamos los componentes al panel.
+        panelFiltros.add(new JLabel("Categoría:"));
+        panelFiltros.add(cmbFiltroCategoria);
+
+        panelFiltros.add(new JLabel("Precio menor a:"));
+        panelFiltros.add(txtPrecioMaximo);
+
+        panelFiltros.add(btnFiltrar);
+        panelFiltros.add(btnMostrarTodos);
+
+        // Evento para aplicar los filtros.
+        btnFiltrar.addActionListener(e -> {
+        aplicarFiltrosCombinados();
+        });
+
+        // Evento para quitar todos los filtros.
+        btnMostrarTodos.addActionListener(e -> {
+        mostrarTodosLosProductos();
+        });
 
         // ====================================================
         // CREAR TABLA
@@ -283,10 +339,23 @@ public class GestorProductos extends JFrame {
         // Utilizamos BorderLayout para la ventana.
         setLayout(new BorderLayout());
 
-        // Formulario arriba.
+        // Formulario y filtros en la parte superior.
+        JPanel panelSuperior =
+        new JPanel(new BorderLayout());
+
+        panelSuperior.add(
+        panelFormulario,
+        BorderLayout.NORTH
+        );
+
+        panelSuperior.add(
+        panelFiltros,
+        BorderLayout.SOUTH
+        );
+
         add(
-                panelFormulario,
-                BorderLayout.NORTH
+        panelSuperior,
+        BorderLayout.NORTH
         );
 
         // Tabla en el centro.
@@ -300,11 +369,11 @@ public class GestorProductos extends JFrame {
                 panelInferior,
                 BorderLayout.SOUTH
         );
-    }
+        }
 
-    private void mostrarProductosSinStock() {
+        private void mostrarProductosSinStock() {
 
-    ordenador.setRowFilter(
+         ordenador.setRowFilter(
             new RowFilter<DefaultTableModel, Integer>() {
 
                 @Override
@@ -319,15 +388,15 @@ public class GestorProductos extends JFrame {
                     return stock == 0;
                     }
         });
-    }
+        }
 
-    // ========================================================
-    // MOSTRAR PRODUCTOS CON STOCK BAJO
-    // ========================================================
+        // ========================================================
+        // MOSTRAR PRODUCTOS CON STOCK BAJO
+        // ========================================================
 
-private void mostrarProductosConStockBajo() {
+        private void mostrarProductosConStockBajo() {
 
-    ordenador.setRowFilter(
+        ordenador.setRowFilter(
             new RowFilter<DefaultTableModel, Integer>() {
 
                 @Override
@@ -345,11 +414,134 @@ private void mostrarProductosConStockBajo() {
     );
 }
 
-    // ========================================================
-    // AGREGAR PRODUCTO
-    // ========================================================
+        // ========================================================
+        // APLICAR FILTROS COMBINADOS
+        // ========================================================
 
-    private void agregarProducto() {
+        private void aplicarFiltrosCombinados() {
+
+        String categoria =
+            cmbFiltroCategoria.getSelectedItem().toString();
+
+        String precioTexto =
+            txtPrecioMaximo.getText().trim();
+
+        java.util.List<RowFilter<DefaultTableModel, Integer>> filtros =
+            new java.util.ArrayList<>();
+
+
+        // FILTRO POR CATEGORÍA
+
+        if (!categoria.equals("Todas")) {
+
+        filtros.add(
+                new RowFilter<DefaultTableModel, Integer>() {
+
+                    @Override
+                    public boolean include(
+                            Entry<? extends DefaultTableModel,
+                                    ? extends Integer> entrada) {
+
+                        String categoriaProducto =
+                                entrada.getStringValue(3);
+
+                        return categoriaProducto.equals(categoria);
+                    }
+                }
+        );
+    }
+
+
+        // FILTRO POR PRECIO MÁXIMO
+
+        if (!precioTexto.isEmpty()) {
+
+        double precioMaximo;
+
+        try {
+
+            precioMaximo =
+                    Double.parseDouble(precioTexto);
+
+        } catch (NumberFormatException e) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "El precio máximo debe ser un número válido.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+
+            return;
+        }
+
+        if (precioMaximo <= 0) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "El precio máximo debe ser mayor que cero.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+
+            return;
+        }
+
+        filtros.add(
+                new RowFilter<DefaultTableModel, Integer>() {
+
+                    @Override
+                    public boolean include(
+                            Entry<? extends DefaultTableModel,
+                                    ? extends Integer> entrada) {
+
+                        double precioProducto =
+                                Double.parseDouble(
+                                        entrada.getStringValue(1)
+                                );
+
+                        return precioProducto < precioMaximo;
+                    }
+                }
+        );
+    }
+
+
+        // APLICAMOS TODOS LOS FILTROS
+
+        if (filtros.isEmpty()) {
+
+        ordenador.setRowFilter(null);
+
+        } else {
+
+        ordenador.setRowFilter(
+                RowFilter.andFilter(filtros)
+        );
+    }
+}
+
+
+        // ========================================================
+        // MOSTRAR TODOS LOS PRODUCTOS
+        // ========================================================
+
+        private void mostrarTodosLosProductos() {
+
+        // Quitamos cualquier filtro aplicado.
+        ordenador.setRowFilter(null);
+
+        // Volvemos a seleccionar "Todas".
+        cmbFiltroCategoria.setSelectedIndex(0);
+
+        // Limpiamos el precio máximo.
+        txtPrecioMaximo.setText("");
+}
+        // ========================================================
+        // AGREGAR PRODUCTO
+        // ========================================================
+
+        private void agregarProducto() {
 
         // Obtenemos el nombre escrito.
         // trim() elimina espacios al principio y al final.
